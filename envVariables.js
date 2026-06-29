@@ -216,6 +216,11 @@ let enviromentVariables = {
     message: 'Incomplete Observation Topic',
     optional: false,
   },
+  ROLES_WITH_VIEWALL_OBSERVATIONS_PERMISSION: {
+    message: 'Comma separated roles that can view all observation submissions',
+    optional: true,
+    default: 'tenant_admin,admin',
+  },
   NOTIFICATIONS_TOPIC: {
     message: 'Notification Topic',
     optional: false,

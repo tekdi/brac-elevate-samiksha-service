@@ -688,6 +688,26 @@ module.exports = class Observations extends Abstract {
     });
   }
 
+  canViewAllObservationSubmissions(userRoles = []) {
+    const observationSubmissionsViewAllRoles =
+      process.env.ROLES_WITH_VIEWALL_OBSERVATIONS_PERMISSION;
+
+    if (!observationSubmissionsViewAllRoles || observationSubmissionsViewAllRoles === '') {
+      return false;
+    }
+
+    if (!Array.isArray(userRoles) || userRoles.length === 0) {
+      return false;
+    }
+
+    const allowedRoles = observationSubmissionsViewAllRoles
+      .split(',')
+      .map((role) => role.trim())
+      .filter(Boolean);
+
+    return _.intersection(userRoles, allowedRoles).length > 0;
+  }
+
   /**
    * @api {get} /assessment/api/v1/observations/assessment/:observationId?entityId=:entityId&submissionNumber=submissionNumber&ecmMethod=ecmMethod Assessments
    * @apiVersion 1.0.0
@@ -720,15 +740,20 @@ module.exports = class Observations extends Abstract {
           result: {},
         };
 
+        let obsevationQueryObject = {
+          _id: req.params._id,
+          status: { $ne:  messageConstants.common.INACTIVE_STATUS },
+          entities: req.query.entityId,
+          tenantId: req.userDetails.tenantData.tenantId,
+          orgId: req.userDetails.tenantData.orgId
+        }
+        obsevationQueryObject.createdBy = req.userDetails.userId;
+        if (req.body.createdBy && this.canViewAllObservationSubmissions(req.userDetails.roles)) {
+          obsevationQueryObject.createdBy = req.body.createdBy;
+        }
+
         let observationDocument = await database.models.observations
-          .findOne({
-            _id: req.params._id,
-            createdBy: req.userDetails.userId,
-            status: { $ne:  messageConstants.common.INACTIVE_STATUS },
-            entities: req.query.entityId,
-            tenantId: req.userDetails.tenantData.tenantId,
-            orgId: req.userDetails.tenantData.orgId,
-          })
+          .findOne(obsevationQueryObject)
           .lean();
 
         if (!observationDocument) {
@@ -2042,8 +2067,12 @@ module.exports = class Observations extends Abstract {
   async entities(req) {
     return new Promise(async (resolve, reject) => {
       try {
+        let userId = req.userDetails.userId;
+        if (req.body.createdBy && this.canViewAllObservationSubmissions(req.userDetails.roles)) {
+            userId = req.body.createdBy;
+          }
         let observations = await observationsHelper.entities(
-          req.userDetails.userId,
+          userId,
           req.userDetails.userToken,
           req.params._id ? req.params._id : '',
           req.query.solutionId,

@@ -183,7 +183,7 @@ module.exports = class ObservationSubmissionsHelper {
 
         if (observationSubmissionsDocument.referenceFrom === messageConstants.common.PROJECT) {
           await this.pushSubmissionToProjectService(
-            _.pick(observationSubmissionsDocument, ['project', 'status', '_id', 'completedDate']),
+            _.pick(observationSubmissionsDocument, ['project', 'status', '_id', 'completedDate', 'answers']),
           );
         }
 
@@ -873,6 +873,7 @@ module.exports = class ObservationSubmissionsHelper {
           projectId: observationSubmissionDocument.project._id,
           _id: observationSubmissionDocument._id,
           status: observationSubmissionDocument.status,
+          answers: observationSubmissionDocument.answers,
         };
   
         if (observationSubmissionDocument.completedDate) {

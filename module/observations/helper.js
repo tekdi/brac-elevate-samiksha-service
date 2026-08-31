@@ -2022,7 +2022,6 @@ module.exports = class ObservationsHelper {
             observationId = observation._id;
           }
         }
-        let entitiesList = await this.listEntities(observationId, tenantData);
         let observationData = await this.observationDocuments(
           {
             _id: observationId,
@@ -2039,6 +2038,10 @@ module.exports = class ObservationsHelper {
             ['allowMultipleAssessemts', 'parentEntityKey']
           );
         }
+        // Only surface the latest submission's id/status when the solution allows
+        // multiple assessments per entity; otherwise fall back to the single-submission case.
+        let showLatestSubmission = solutionData && solutionData[0] ? !!solutionData[0].allowMultipleAssessemts : false;
+        let entitiesList = await this.listEntities(observationId, tenantData, showLatestSubmission);
 
         return resolve({
           success: true,
@@ -2071,7 +2074,7 @@ module.exports = class ObservationsHelper {
    * @returns {Object} List of observation entities.
    */
 
-  static listEntities(observationId, tenantData) {
+  static listEntities(observationId, tenantData, showLatestSubmission = false) {
     return new Promise(async (resolve, reject) => {
       try {
         let observationDocument = await this.observationDocuments(
@@ -2126,7 +2129,7 @@ module.exports = class ObservationsHelper {
             let observationSubmissions = await observationSubmissionsHelper.observationSubmissionsDocument({
               observationId: observationId,
               entityId: currentEntities._id,
-            });
+            }, 'all', { createdAt: 1 });
 
             let entity = {
               _id: currentEntities._id,
@@ -2135,7 +2138,11 @@ module.exports = class ObservationsHelper {
               submissionsCount: observationSubmissions.length > 0 ? observationSubmissions.length : 0,
             };
 
-            if (observationSubmissions.length == 1) {
+            if (showLatestSubmission) {
+              const lastSubmission = observationSubmissions?.[observationSubmissions.length - 1];
+              entity['submissionId'] = lastSubmission?._id || "";
+              entity['status'] = lastSubmission?.status || "";
+            } else if (observationSubmissions.length == 1) {
               entity['submissionId'] = observationSubmissions[0]._id;
               entity['status'] = observationSubmissions[0].status;
             }

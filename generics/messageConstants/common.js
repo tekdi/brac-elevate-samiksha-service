@@ -12,6 +12,7 @@ const ORG_EXTENSION_VISIBILITY = {
 }
 
 module.exports = {
+  TENANT_CODE_HEADER: process.env.TENANT_CODE_HEADER_NAME.toLowerCase(),
   ASSESSMENT: 'assessment',
   OBSERVATION: 'observation',
   INSTITUTIONAL: 'institutional',

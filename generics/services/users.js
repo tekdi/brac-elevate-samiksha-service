@@ -214,7 +214,7 @@ const fetchPublicTenantDetails = function (tenantId) {
       const options = {
         headers: {
           'content-type': 'application/json',
-          'x-tenant-code': tenantId,
+          [messageConstants.common.TENANT_CODE_HEADER]: tenantId,
         },
       };
       request.get(url, options, publicBranding);

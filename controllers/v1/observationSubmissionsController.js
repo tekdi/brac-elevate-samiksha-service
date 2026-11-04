@@ -1316,4 +1316,30 @@ module.exports = class ObservationSubmissions extends Abstract {
       }
     });
   }
+
+  /**
+   * Check-in and midline submissions the daily nudges in brac-utility-service look at (internal access only).
+   * @method
+   * @name nudgeCandidates
+   * @param {Object} req - request data.
+   * @param {String} req.query.tenantId - tenant code.
+   * @returns {JSON} - last completed check-in per entity, old incomplete check-ins, entities with a completed midline.
+   */
+  async nudgeCandidates(req) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        if (!req.query.tenantId) {
+          throw { status: httpStatusCode.bad_request.status, message: 'tenantId is required' };
+        }
+        const result = await observationSubmissionsHelper.nudgeCandidates(req.query.tenantId);
+        return resolve(result);
+      } catch (error) {
+        return reject({
+          status: error.status || httpStatusCode.internal_server_error.status,
+          message: error.message || httpStatusCode.internal_server_error.message,
+          errorObject: error,
+        });
+      }
+    });
+  }
 };

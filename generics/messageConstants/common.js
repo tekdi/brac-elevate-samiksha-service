@@ -133,5 +133,8 @@ module.exports = {
   SESSION_VERIFICATION_METHOD: {
 		USER_SERVICE: 'user_service_authenticated',
 	},
-  ORG_EXTENSION_VISIBILITY
+  ORG_EXTENSION_VISIBILITY,
+  // Solution keywords of the BRAC individual check-in and midline observations
+  INDIVIDUAL_CHECKIN: 'INDIVIDUAL_CHECKIN',
+  MIDLINE: 'MIDLINE',
 };

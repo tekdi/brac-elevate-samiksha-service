@@ -575,6 +575,61 @@ module.exports = class ObservationSubmissionsHelper {
    * @returns {Object} - Paginated list: `count` (rows this page), `total` (all matches). No `totalCount` or `pagination` keys (aligned with project-service router).
    */
 
+  /**
+   * Check-in and midline submissions the daily nudges in brac-utility-service look at.
+   * @method
+   * @name nudgeCandidates
+   * @param {String} tenantId - tenant code.
+   * @param {Number} incompleteAfterDays - started/draft check-ins at least this old are returned.
+   * @returns {Object} checkIns: last completed individual check-in per entity,
+   *                   incompleteCheckIns: individual check-ins started but not completed for incompleteAfterDays,
+   *                   midlineCompleted: entities with a completed midline.
+   */
+  static async nudgeCandidates(tenantId, incompleteAfterDays = 30) {
+    const solutions = await solutionsQueries.solutionDocuments(
+      { tenantId, keywords: { $in: [messageConstants.common.INDIVIDUAL_CHECKIN, messageConstants.common.MIDLINE] } },
+      ['_id', 'keywords']
+    );
+    const solutionIds = (keyword) =>
+      solutions.filter((solution) => (solution.keywords || []).includes(keyword)).map((solution) => solution._id);
+    const checkInIds = solutionIds(messageConstants.common.INDIVIDUAL_CHECKIN);
+    const midlineIds = solutionIds(messageConstants.common.MIDLINE);
+    const notDeleted = { deleted: { $ne: true } };
+    const incompleteBefore = new Date(Date.now() - incompleteAfterDays * 24 * 60 * 60 * 1000);
+
+    const [checkIns, incompleteCheckIns, midlineCompleted] = await Promise.all([
+      database.models.observationSubmissions.aggregate([
+        { $match: { tenantId, solutionId: { $in: checkInIds }, status: 'completed', ...notDeleted } },
+        { $group: { _id: '$entityId', lastCompletedAt: { $max: '$completedDate' } } },
+        { $project: { _id: 0, entityId: '$_id', lastCompletedAt: 1 } },
+      ]),
+      database.models.observationSubmissions
+        .find(
+          {
+            tenantId,
+            solutionId: { $in: checkInIds },
+            status: { $in: ['started', 'draft'] },
+            createdAt: { $lt: incompleteBefore },
+            ...notDeleted,
+          },
+          { entityId: 1, createdBy: 1, createdAt: 1 }
+        )
+        .lean(),
+      database.models.observationSubmissions.distinct('entityId', {
+        tenantId,
+        solutionId: { $in: midlineIds },
+        status: 'completed',
+        ...notDeleted,
+      }),
+    ]);
+
+    return {
+      success: true,
+      message: 'Observation submissions fetched successfully',
+      result: { checkIns, incompleteCheckIns, midlineCompleted },
+    };
+  }
+
   static list(
     entityId,
     observationId,
